@@ -1,0 +1,721 @@
+
+                     I N S T A L L A T I O N
+
+
+
+
+
+IMPORTANT: BEFORE attempting to install and use the netboot package please
+           read this whole text carefully! The most important word in the
+           previous sentence is the word BEFORE, and the second important
+           word is WHOLE! If you don't read this text carefully, and you
+           blow up any of your systems, don't blame me. You have been warned...
+
+
+IMPORTANT: Even when cautiously following all instructions in this text it
+           might be that something goes wrong. In this case, you can refer
+           to a file called PROBLEMS in the same directory where you found
+           the file which you are currently reading. PROBLEMS is like a FAQ
+           and contains solutions to some of the more common problems.
+
+
+
+
+
+Overview of the installation process
+====================================
+
+
+Due to it's nature this package requires at least two computer systems. One
+acts as a server, and at least one other will be setup as a diskless client.
+Therefore this installation guide is divided into four sections:
+
+	1.) Compilation and installation of utility programs on the server
+	2.) Create a netbootable image of the target operating system
+	3.) Setup of the server
+	4.) Setup of the client including building the bootrom
+
+The server has to support TCP/IP and certain protocols based on this network
+standard. Most likely this will be a Unix-type server. Though it's probably
+possible to also use servers running OS/2 or Windows-NT, for example, all
+server related programs in this package can currently only be compiled on
+a Unix-type host. This requirement is independed of the operating system
+which is later booted on the diskless client. Therefore even if you want
+to boot MS-DOS on your client(s) you need at least one Unix-type computer
+for program compilation and generation of all boot files. Lateron when all
+necessary files are built you can use any server you want.
+
+This package contains two main parts:
+
+	1.) The bootrom source and binaries. This part gets installed on
+	    the diskless client. All binaries except those of utility programs
+	    are already precompiled. There are no further user changeable
+	    or adjustable options in the bootrom sources so you don't have
+	    to recompile the bootrom in order to use it.
+	    In order for the bootrom to access the network card in your
+	    diskless client you need a driver. Currently the bootrom supports
+	    packet drivers and NDIS drivers, which are normally used on
+	    DOS systems to interface a network stack with the hardware.
+	    With this package only the network driver binaries are required,
+	    so you don't need to recompile anything here as well. You can
+	    find precompiled packet drivers for many popular network cards
+	    on any SimTel FTP mirror (it's called Crynwr packet driver col-
+	    lection), and for those of you without internet access some of
+	    those packet driver binaries are included with this package.
+	    Another good source for a packet driver for your network card
+	    might be it's manufacturer. At least the well known manufacturers
+	    (3Com and SMC for example) provide packet drivers for their
+	    complete product line. Those manufacturer provided packet drivers
+	    are usually faster and easier to install than those from the
+	    Crynwr collection, and can often determine the hardware configu-
+	    ration at runtime, which some Crynwr drivers can't. You can use
+	    .COM and .EXE type packet drivers.
+	    Similarily, NDIS drivers are usually provided with your network
+	    card by it's manufacturer. On the driver disks you can often
+	    find NDIS drivers in a directory called LANMAN or NDIS. Be sure
+	    that you use an NDIS driver suitable for DOS, which complies to
+	    NDIS specification version 2.0.1 or older. NDIS drivers for
+	    Windows-95/-98 or Windows-NT/-XP (version 3.x of the NDIS specifi-
+	    cation or above) are not usable with netboot.
+	    You only need one network driver, either a packet driver or
+	    an NDIS driver. Since the packet driver interface within the
+	    bootrom is better tested than the NDIS interface as of yet, you
+	    might probably be better off first using a packet driver, if
+	    available. However, sometimes NDIS drivers are smaller and faster
+	    than packet drivers, so after testing with a packet driver it is
+	    recommended to also try using an NDIS driver when available.
+	    Lateron you can choose that one for a final bootrom which works
+	    best.
+
+	2.) A set of programs to generate netbootable images on the server.
+	    These programs are called mknbi-<os>, where <os> identifies the
+	    operating system which is lateron running on the diskless client.
+	    Currently only Linux and DOS are supported. For booting FreeBSD
+	    you don't need any mknbi-* program, as FreeBSD supports network
+	    booting right out of the box.
+
+There is another requirement which should not be left unnoted: the usual
+size of a bootrom will be between 16kB and 32kB (of course this depends on
+the size of the network driver). Therefore when you go shopping for a network
+card you should try to get one which is able to support at least 32kB EPROM's.
+This is standard on almost all cards from major manufacturers, but most cheap
+NE2000 are known to allow only a maximum of 16kB. Also note that some network
+cards from 3Com and SMC allow you to select ROM sizes of 32kB and more with
+their configuration programs, but can physically support only 16kB!
+
+
+
+
+
+Compilation and installation of utility programs on the server
+==============================================================
+
+
+This package uses GNU's autoconf to configure the compilation process
+of the utility programs. You shouldn't have any problems to compile
+these programs on most Unix-type system. They have been tested on these
+systems with the generic C compilers:
+
+		Linux 2.0.35 on x86 processor with glibc 2.0.1
+		Linux 2.4.20 on x86 processor with glibc 2.2.5
+		Linux 2.4.28 on Alpha processor with glibc 2.1.3
+		FreeBSD 4.4 on x86 processor
+		SCO SysV 3.2 (ODT 5.0) on x86 processor
+		SunOS 5.5.1 (Solaris) on Sparc 10
+		OSF/1 3.2 on Alpha processor
+		AIX 4.1 on PowerPC
+		IRIX 5.3
+
+Proceed as follows to compile the utility programs on your system:
+
+	1.) Cd into the netboot directory and run ./configure. It's
+	    a configuration script generated by autoconf and checks
+	    for header files and system specific details. The mknbi
+	    utility programs contain some Intel assembler modules which
+	    lateron run on the diskless client. If you want to assemble
+	    these modules on your own you need a GNU C compiler (version
+	    3.x or above) and the corresponding binutils. In case you
+	    are compiling the utility programs on anything different
+	    than x86 you will need an x86 cross compiler for the assem-
+	    bly modules.  However, there are preassembled files included
+	    with this package, so you actually don't need any GNU tools.
+	    configure checks for the usability of any installed GNU
+	    development tools and creates the Makefiles accordingly.
+	    For an explanation of the command line switches available with
+	    the configure script just run it with the --help option. Some
+	    additional switches are:
+
+		--disable-mknbi-linux
+		--disable-mknbi-dos
+		--disable-mknbi-mgl
+
+	    Choose these options if you don't want to create any of the
+	    corresponding mknbi utility programs. Unless you definitely
+	    know that you don't need any of these programs it is recommended
+	    to not use these switches.
+	    There is also another configure option:
+
+		--enable-bootrom
+
+	    Use this option only if you want to recompile the bootrom
+	    itself. If you want to use the precompiled binaries, you don't
+	    need to specify this switch. See the file README.bootrom
+	    about how to recompile the bootrom.
+
+	2.) Check that all generated Makefiles and the config.h are correct
+	    for your system.
+
+	3.) Compile from within the main netboot directory with
+
+		make clean
+		make
+
+	    This will compile all programs without those which you disabled
+	    during the configuration stage. IMPORTANT NOTE: Some Makefiles
+	    use a syntax, which not every make program understands. If you
+	    get an error from make (usually in the form: "missing delimiter")
+	    then get and install GNU make on your system! Especially System V
+	    systems are known to have this deficiency.
+
+	4.) Permanently install the utility programs on your server with
+
+		make install
+
+	    This will also install the corresponding man pages for later
+	    reference. Although it's possible to run all programs without
+	    installation, it's highly recommended to not skip this step.
+	    Otherwise you might loose some functionality, since all confi-
+	    guration files are created assuming permanent installation.
+	    Unless you didn't change the ./configure prefix, the installation
+	    step will create directories called /usr/local/lib/netboot and
+	    /usr/local/share/netboot, and copy almost all files into them.
+	    Only the executables get copied into /usr/local/bin, and the man
+	    pages go into /usr/local/man.  Also, the major configuration file
+	    (netboot.config) will be copied to /usr/local/etc.
+
+
+
+
+
+Create a netbootable image of the target operating system
+=========================================================
+
+
+This step of the installation process depends on which operating system
+you want to boot on your diskless clients. Everything described in this
+chapter does not depend on working on a Linux system. You can use any
+Unix type system to create the netbootable images. Most utility programs
+in this package offer a whole bunch of different runtime options, so
+that there are many different ways to achieve the same thing. The
+following descriptions explain how to work with the utilities using
+command line parameters. However, all of them also offer the possibility
+to use a database which holds all required information about client
+systems. This is especially useful when maintaining a larger base of
+diskless client systems. I recommend to first check out the installation
+instructions below. Lateron, when you got familiar with using all tools,
+read the netboot.db(5) man page, then read it again, then check the
+example database (misc/netboot.db.sample in the original netboot distri-
+bution) and then write your own system database, if you like.
+
+Linux:	With Linux you have far too many options to list them all in
+	this text. Please refer to the mknbi-linux(8) man page for all
+	details. I will only describe the most common ways to setup a
+	diskless Linux client here.
+	First you have to decide where the Linux client is going to
+	mount it's root filesystem from. This can either be a directory
+	on an NFS server or a ram disk. Setup your Linux kernel accordingly.
+	To use a root filesystem on an NFS server you should include TCP/IP
+	network support into the kernel together with support for NFS file-
+	systems. You cannot load this NFS support using a module as it has
+	to be available at bootup. Additionally you also have to select
+	NFSROOT and IP AUTOCONFIGURATION support during kernel configuration.
+	However, you don't need BOOTP or RARP support. Accordingly if you
+	want to use a ramdisk the filesystem type you are going to use on
+	the ramdisk has to be permanently compiled into the kernel. Also
+	initrd support has to be included in that case. Using an inapprop-
+	riately configured kernel is the most common problem when trying
+	to network-boot Linux.
+
+
+	1.) Configuring for NFS root filesystem.
+
+	Next copy your Linux kernel into the current directory and run
+	mknbi-linux:
+
+		mknbi-linux -d rom -i rom -k zImage -o bootImage
+
+	This supposes that your kernel image is called zImage, and gives
+	you a netbootable image named bootImage. While mknbi-linux works
+	with compressed and uncompressed kernels you should always use
+	a compressed kernel for preformance reasons.
+
+
+	2.) Configuring for root filesystem on ramdisk
+
+	If you want to use a ramdisk as a root device you have to create
+	a ramdisk image first. Probably the easiest way to setup such an
+	image is to use a floppy, though you can also use the loopback
+	device if you are working on a Linux host. First format the floppy
+	and make a filesystem on it, which is supported by the Linux kernel
+	of your diskless client. Next copy all programs and files onto
+	it which you want to have on the root filesystem of the diskless
+	client lateron. You should then test your root floppy. To do this
+	copy your kernel onto another floppy with dd and set it's root device
+	to floppy using rdev:
+
+		dd if=zImage of=/dev/fd0
+		rdev /dev/fd0 /dev/fd0
+
+	Now boot your diskless client using this boot disk. After the kernel
+	started up, it will ask you to insert the root floppy and to press
+	enter. Your root floppy will be mounted.
+	If everything works as you intended, you can now create a netbootable
+	image. Re-insert the root floppy into your server system and type:
+
+		dd if=/dev/fd0 of=ramImage
+		gzip -9 ramImage
+		mknbi-linux -d ram -i rom -r ramImage.gz -k zImage -o bootImage
+
+	Like above this will now give you a file bootImage with the netbootable
+	Linux kernel image in it.
+
+
+FreeBSD: Network booting is supported right out of the box starting with FreeBSD
+	version 4.x. In the directory /boot of your FreeBSD distribution you
+	can find a file named 'pxeboot'. You can use this file as your boot
+	image file without modification.
+
+
+DOS:	To boot DOS on your diskless client you have to have MS-DOS Version
+	5.0 or higher. Windows-95 has an internal DOS called version 7.0, so
+	it should be no problem to use it as well. Older MS-DOS versions
+	will probably not work. OpenDOS, FreeDOS, DR-DOS and PTS-DOS also
+	work depending on their version. A lot of efforts have been done on
+	mknbi-dos to provide support for almost all available DOS clones, but
+	it is still possible that some version might not work.
+
+	First you have to create a directory which contains all the files
+	the client will see on it's boot drive (either A: or C:). This
+	can either be the root directory on a DOS floppy or any directory
+	on the system on which you installed mknbi-dos. In the first case
+	it has to be a floppy which contains a bootable DOS system, i.e.
+	which has been created with
+
+		format a: /s
+
+	on a DOS system. If the directory resides on a UNIX system, you
+	have to copy the two system files msdos.sys and io.sys, which are
+	part of MS-DOS, into it by yourself. When using IBM-DOS or OpenDOS,
+	these files are called ibmbio.com and ibmdos.com. To do this copying
+	I recommend using mread of the MTools, which are freely available
+	for almost every UNIX system (see your favorite GNU mirror for
+	further information).
+
+	After you created the directory or floppy which lateron becomes
+	the clients boot drive, you should copy all other necessary files
+	into it. This will probably include programs to setup a network
+	environment on the client. When editing text files for the client
+	please note that they usually have to be in DOS format with
+	lines ending in Carriage-Return/Linefeed instead of just Linefeed
+	as it is common on UNIX systems. If you start himem.sys from within
+	config.sys you should be careful since newer versions of himem.sys
+	(at least newer than 3.09) can destroy the ramdisk image in memory.
+	If you have trouble starting DOS from the network but not from a
+	boot diskette with the same setup, you should try to add the
+	following switch to the himem.sys call:
+
+		/testmem:off
+
+	With OpenDOS, the himem.sys functionality is incorporated within
+	emm386. However, this doesn't work with netboot. You still have to
+	load both, himem.sys and emm386, for mknbi-dos to operate properly.
+	The warning which will be printed by emm386 about himem.sys already
+	being loaded can be safely ignored. This will eventually be corrected
+	in future versions of netboot.
+
+	When you are finished setting up the clients boot directory run
+	mknbi-dos to create a netbootable image:
+
+		mknbi-dos -r /dev/fd0 -o bootImage
+
+	This assumes that you inserted the boot floppy into the fd0 drive
+	of your UNIX system, and will create a file named bootImage. If you
+	used a UNIX directory instead of a floppy disk, substitute /dev/fd0
+	with the name of that directoy. mknbi-dos will automatically detect
+	if it is a directory, an ordinary file or a block device.
+
+	By default mknbi-dos creates a netbootable image, which lateron
+	mounts the ram disk as the A: drive on your client. If you want
+	to mount the ram disk as C: instead, you should include the '-c'
+	switch to the call of mknbi-dos.
+	The difference between mounting the ram disk as a floppy (A:) or
+	hard disk (C:) is, that with the floppy option the ram disk can
+	be removed lateron, maybe after a network redirector has been
+	loaded, which makes the ram disk obsolete. This is not possible
+	with a virtual hard disk drive. On the other hand side, when using
+	the ram disk as C: you can specify a different ramdisk size with
+	the '-s' option. Please refer to the man page for mknbi-dos for
+	further information.
+
+
+
+
+
+
+Setup of the server
+===================
+
+
+Setup of the server depends on the kind of server you are using. There-
+fore all further explanations in this chapter can only serve as a general
+guide. You should consult your server's documentation as the final autho-
+rity.
+
+When the bootrom starts on the client it first tries to query a BOOTP or
+DHCP server for information like IP numbers and the name of the boot image
+file. Such a BOOTP server program is usually called bootpd. Alternatively,
+DHCP servers are commonly called dhcpd. Most SunOS servers use a program
+called bootparamd instead. Note that you _cannot_ use bootparamd as a
+substitute for bootpd or dhcpd as it uses a different protocol. Install a
+publicly available bootpd instead on your sun. Next you should copy the
+bootImage file, which you have created in the previous step above, into a
+publicly accessible directory (called /boot for example). If you want to
+boot more than one diskless client you can use the same bootImage file for
+all clients, provided that these clients use similar hardware. However,
+if you configured for a ramdisk (with Linux or DOS) and the ramdisk image
+contains different files or information for each client, you will obviously
+also need a different bootImage file for each client.
+
+Then you need to setup a boot description file for bootpd, which is
+usually called /etc/bootptab. Consult your server's documentation for
+further information. However, the entries in this file will usually
+look something like this for every diskless client:
+
+client1:hd=/boot:vm=auto:ip=192.109.225.66:\
+	:ht=ethernet:ha=004001417173:\
+	:bf=bootImage-client1:rp=/boot/client1/root
+
+'hd' specifies the home directory and 'bf' is the name of the bootImage file,
+which you created in the previous step. Therefore the full pathname for
+the bootImage file for the diskless system called "client1" will be
+
+	/boot/bootImage-client1
+
+with this sample entry. The 'ip' tag specifies the IP address of the client,
+'ht' the type of the network the client is attached to, and 'ha' it's hard-
+ware address. The 'vm=auto' tag tells bootpd to use the same vendor encoding
+as the bootrom. If your diskless client is going to use it's root filesystem
+via NFS you should also specify the directory on the server which gets mounted
+lateron with the 'rp' tag. However, if your diskless client uses a ramdisk,
+you can omit 'rp'.
+The format of the configuration file required for your BOOTP or DHCP server
+might be different from the above sample, so you should carefully read all
+documentation which comes with your server.
+Of course you should also remember to get bootpd or dhcpd running on the
+server, either on bootup from /etc/rc or some similar mechanism, or from
+inetd. Again, see your server's documentation about how to do this. Note
+that after starting bootpd, it is usually required to send it a HUP signal
+whenever you have changed /etc/bootptab. Some DHCP servers even need a
+complete restart when their configuration files have been changed.
+
+The next step preformed by the bootrom after querying the BOOTP server is
+to load the boot image file specified by the 'hd' and 'bf' tags in
+/etc/bootptab. To do this a protocol named TFTP is used. Therefore you
+will next have to setup a daemon process for this protocol on your server.
+Such a daemon is usually called tftpd, and you should again remember to
+get tftpd running, usually via inetd. Since the TFTP protocol is very
+insecure, access to the tftpd server is usually restricted, either within
+tftpd itself, or with a TCP/IP wrapper like tcpd. tcpd for example uses
+host access control tables which are stored in /etc/hosts.allow and
+/etc/hosts.deny. See tftpd(8), tcpd(8) and hosts_access(5) as well as
+your server's documentation for further information.
+
+If you selected a ramdisk for the diskless client's root directory you are
+now finished with the server setup. But if your client is going to use NFS
+(either directly like with booting Linux, or by using programs included on
+the ram disk) or if you want to boot FreeBSD (which requires NFS as there
+is no ramdisk support available) you should now setup everything which is
+necessary for mounting an NFS directory on the server. This usually involves
+running several programs: portmap, mountd, nfsd and optionally ugidd. portmap
+usually doesn't require editing any configuration files. But for mountd and
+nfsd you need to specify the permissions which allow the client to access
+the required directories on the server. These permissions are usually set
+with a file called /etc/exports. Typically it looks like this for our sample
+client:
+
+#
+#  Export directories for client1 (diskless workstation)
+#
+/boot/client1/root		client1(rw,link_absolute)
+/boot/client1/usr		client1(rw,link_absolute)
+
+If you use 'map-daemon' to map UID and GID numbers on the server you
+should remember to also configure and run ugidd on the server. Please
+consult your server's documentation for further information regarding
+setup of NFS exports. You might also want to check out the portmap(8),
+nfsd(8), mountd(8) and ugidd(8) man pages. Also remember that access
+to any of these services might be restricted with tcpd on your server.
+
+Another important step is to fill up the root directory for the disk-
+less client. It has to contain all files necessary for the client to
+startup and mount further directories via NFS (like a /usr filesystem
+as specified in the /etc/exports example above). How to setup this
+root directory is far beyond the scope of this documentation. Just one
+hint: if your server is _not_ running the same operating system as the
+client you are going to boot, you should be aware of major/minor number
+assignments in the /boot/client1/root/dev directory. For example, simply
+using mknod on an AIX server will eventually give you wrong major/minor
+number when the directory is later exported to a Linux diskless client.
+With some configurations AIX will add a certain offset to all major numbers
+which makes them unusable for Linux. Refer to your server's manuals for
+further information. You might also find some useful hints in the file
+Documentation/nfsroot.txt in the Linux source tree, if your diskless
+client is booting Linux. Also, the PROBLEMS file in this package contains
+some useful hints when you run into any major/minor number or other NFS
+problems.
+
+When booting FreeBSD it is important to copy the kernel file (which can
+be found in the root directory of a FreeBSD client) onto the server into
+/boot/client1/root or wherever your client's root directory lies on the
+server. Also, the /boot directory of the FreeBSD client, which is going
+to be mapped via NFS to /boot/client1/root/boot on the server, has to be
+valid. It should contain all the files which come with your FreeBSD
+distribution in this directory.
+
+
+
+
+Setup of the client including building the bootrom
+==================================================
+
+
+Until now you only had to work on the server (with the exception of maybe
+booting your diskless client from a diskette to check the correctness of
+the root filesystem). As the last step we can now go on and setup the
+diskless client itself.
+
+The first step is to configure the network card in the diskless client. For
+this refer to the manual which came with the network card. Some cards require
+setting some jumpers. Others have setup programs which have to be run. After
+configuring the network interface write down all necessary hardware parameters
+like I/O addresses, memory addresses, interrupt line number or DMA channel
+numbers, as you might need this information lateron in the configuration
+process. Also make sure, that you enabled PnP and/or PCI support in the client
+BIOS setup when you are using an ISA-PnP or PCI network card. The network card
+has to be properly configured by the BIOS _before_ the bootrom starts and
+_before_ any operating system gets loaded. There is no way of running an
+ISA-PnP configuration utility from within the bootrom.
+
+Next go back to your UNIX-type server and copy all network drivers for your
+network card into the main netboot directory. Packet drivers should go
+into /usr/local/share/netboot/netdrvr/pktdrvr, and NDIS drivers should be
+copied into /usr/local/share/netboot/netdrvr/ndis2, or wherever you permanently
+installed netboot. Then run
+
+	makerom
+
+in any directory to start the bootrom configuration program. It will first
+ask you about certain characteristics of the final bootrom. Usually, you
+can just accept the default answer by pressing <enter>. For a further
+explanation of all the questions asked by makerom refer to it's man page or
+it's builtin help function.
+It will then print you a list of known network cards. Choose a description
+from this list which matches your network card as close as possible. This
+is extremely important! For example, SMC produced different network cards
+which are all 8013 compliant, but which require different parameters for
+the network driver configuration. They can be distinguished by their postfix
+(8013EB, 8013EBT, 8013S etc.). As another example, Accton produced network
+cards with the same number (1207) but with different and incompatible chip-
+sets. A final example: even though many cheap PCI network cards are claimed
+to be NE2000 compatible they require a different bootrom and driver confi-
+guration than a true NE2000 and ISA-NE2000-compatibles. Therefore, it can't
+be stressed enough that you have to select a network card from the list
+which fits your card as exactly as possible.
+
+If your network card is not in the list printed by makerom, you should
+choose 0 which means "unknown network card or unsupported network driver".
+In this case makerom will next ask you about which type of network driver
+interface you want to use. Select the one which is supported by your
+network driver. Then enter the path name of that network driver. You will
+then have to enter a command line for a packet driver, or the name
+of a protocol.ini file for an NDIS driver:
+
+	- Packet driver command line: enter all command line options
+	    required by your packet driver (without the packet driver
+	    file name). Please refer to the documentation which comes
+	    with the driver. Also, most packet drivers print the command
+	    line options they know about when you run them without any
+	    options under DOS. Don't specify any options here which
+	    switch the driver into windows mode or which allow it to
+	    work for diskless systems or bootroms. Those options are
+	    for Novell network bootrom setups only, and are not necessary
+	    for the netboot bootrom.
+
+	- NDIS protocol.ini file: NDIS drivers require a resident utility
+	    called protocol manager when run on a DOS system. This protocol
+	    manager is responsible of providing configuration data to the
+	    NDIS driver and connecting it to a protocol stack (like a TCP/IP
+	    stack). The NDIS driver interface of the netboot bootrom contains
+	    a protocol manager simulator, so you don't need the actual protocol
+	    manager program. However, like the real protocol manager, the simu-
+	    lator also needs a protocol.ini file. This file will be parsed by
+	    makerom and included into the bootrom in a compressed binary
+	    format. Since the bootrom knows what protocol stacks are available
+	    within itself, the protocol.ini file for netboot only requires the
+	    information for configuring the NDIS driver. See the makerom man
+	    page for a short description of the format of a protocol.ini
+	    file. It consists of sections, each prepended by a section name
+	    enclosed in square brackets. For the netboot bootrom, only the
+	    section is required which contains the NDIS driver configuration
+	    information. This information is organized in parameter values,
+	    with each parameter on a seperate line. Following a parameter
+	    name comes an equal sign and the parameter value. See the docu-
+	    mentation of your NDIS driver about which parameters it under-
+	    stands. However, at least the drivername parameter has to appear
+	    in every NDIS driver configuration section. For example, a minimal
+	    protocol.ini file for an Accton EN1207D network card should look
+	    like:
+
+		[accnd]
+		  drivername = accnd$
+
+	    The name of the section is unimportant, but the value of the
+	    drivername parameter has to be exactly as required by the NDIS
+	    driver. Some drivers might need additional parameters like I/O
+	    addresses, memory addresses, buffer sizes etc.
+
+If your network card is in the list of cards known, then you can just
+enter it's number. You don't have to worry about packet driver command
+lines and protocol.ini files in that case. If more than one driver is
+available for your card, makerom will print a list of available drivers,
+and you can select one. It will then ask you about all necessary hardware
+information to provide to the network driver. Especially for ISA cards,
+this might include the I/O address of the network card, it's interrupt
+number and a DMA channel number. Note that only that information is
+requested which is really necessary for the network driver selected. You
+should have your network card information handy when entering this infor-
+mation. Some network drivers (especially for PnP and PCI network cards)
+are able to determine hardware related information at runtime and there-
+fore don't require any further information to be entered.
+
+When you are using a packet driver, makerom will next ask you if you
+want to include the packet driver debugging program. That's an additional
+module to trace network problems and is usually not required. It shows
+you the first couple bytes of all packets (where the UDP/IP headers are
+encoded) going through the packet driver during boot time of the diskless
+client. Only select this debugging module if you run into problems during
+the initial network boot process of the bootrom _and_ you know how to
+decode the UDP/IP header information. Otherwise do not include this
+debugger.
+
+makerom will also ask you about any additional modules you want to
+install into the bootrom. These modules have to be standard DOS COM-
+or EXE-type programs, and can, for example, enhance special features
+of the network driver. However note that the total size of the resulting
+bootrom image can't be larger than 128kB. Finally makerom will ask you
+what kind of output file you want to create. Choose the type which your
+EPROM burner understands. The most likely choice will be "raw binary" or
+"intel hex" but better check your burner's manual first. If you don't
+want to burn an EPROM, don't worry and choose anything, since the floppy
+boot image always gets generated (see below). You probably don't want to
+create a "flash" binary at this stage. See below for further information
+about Flash-EPROM usage.
+
+After you answered all questions makerom is creating the bootrom according
+to your specifications. It first combines the bootrom kernel with all selected
+modules, then compresses the resulting file and adds the bootrom startup code.
+When it has finished you will find two new files in the current directory:
+
+	image.flo   - this file can be written onto a floppy using dd
+
+and either one of
+
+	image.rom   - raw binary image to be burned into an EPROM
+	image.hex   - hex encoded image to be burned into an EPROM
+	image.flash - ROM image to be used for remote programming of a FlashCard
+
+At first you will probably _not_ need the file image.flash. See below for
+further information about flash memory and FlashCard.
+
+You should now copy image.flo onto a floppy using
+
+	dd if=image.flo of=/dev/fd0 conv=sync
+
+and then boot your diskless client using this floppy. 
+
+If you have setup everything (including your network card) you will
+see the bootrom code starting, querying the BOOTP server and loading
+the boot image file. When everything works as required you can then go
+on and burn the file image.rom or image.hex into an EPROM. Please
+consult the manual of your EPROM burner how to do this. Insert the
+burned EPROM into the socket on your network card and turn on the
+diskless system. You should now see the bootrom coming up. If not, but
+the bootrom works when started from a floppy, your BIOS might not be
+able to recognize the EPROM properly. In this case you might want to
+use the romcheck program which allows you to inspect the ROM area in
+your client. Refer to the file README.romcheck for further
+information.
+
+Another way of getting the bootrom code into your client is using the
+Flash-EPROM card (called FlashCard), for which you can find a schematic
+and PCB layout in this package. You can use the raw binary image (image.rom)
+directly to burn it into FlashCard, but it's much easier to use the special
+flash image format (image.flash), which can be created by makerom. If you
+have built a FlashCard and installed it into your client, proceed as follows:
+
+	1.) Copy the file image.flash into a directory which is accessible
+	    by TFTP on your server
+	2.) Edit /etc/bootptab so that the client will load image.flash
+	    instead of the normal boot image file. Usually, this means
+	    changing the 'bf' setting in the client's bootptab entry. Re-
+	    member to send a HUP signal to your bootpd process if it's
+	    running permanently. Alternatively you can also set 'bf' to
+	    a soft link, and let that link point either to the normal boot
+	    image file, or image.flash in case of programming the FlashCard.
+	    Then you just need to change the link, and not to edit bootptab.
+	    Proceed accordingly if you are using a DHCP server.
+	3.) Copy the file image.flo onto a bootable floppy as described
+	    above
+	4.) Boot your client using this floppy. This will start the bootrom
+	    code on the floppy, which will then load the image.flash file
+	    and program it's contents into the FlashCard. Once you initialized
+	    the FlashCard like this you can skip step 3 for future bootrom
+	    upgrades.
+	5.) Restore the old 'bf' entry in your /etc/bootptab file on the
+	    server or let the soft link point back to the original boot
+	    image file. Again, remember to send a HUP signal to your per-
+	    manently running bootpd (if applicable).
+
+Some network cards have a flash EEPROM already installed on the network card.
+For some of those cards, makerom is also able to produce a flash image which
+you can use exactly in the same way as described above. The only difference
+is that you don't need to make yourself a FlashCard. Another alternative is
+to put the bootrom code directly into the main system BIOS, for example to
+replace a commercial PXE bootrom code. makerom can produce a binary bootrom
+image which you can use this way, but the exact steps to perform this BIOS
+inclusion are beyond the scope of this document. Refer to the netboot home
+page at http://netboot.sourceforge.net for further information. Also, re-
+designing and programming your own system BIOS is risky and dangerous, so
+you should have pretty much knowledge about what you are going to do, because
+you can easily make your system completely useless.
+
+Finally it might be worth mentioning that you can also put the floppy image
+(e.g. image.flo) onto a bootable hard disk partition. This way, you can
+start netboot without having to burn an EPROM but with a hard disk installed.
+Simply create an empty bootable partition. Then you can copy image.flo into
+that partition, for example using dd if you have Linux running on your
+client, or some other program like the Norton Utilities.
+
+
+
+
+Appendix: Adding a menu
+========
+
+After you got the remote boot process running you might consider to
+implement a boot menu. With such a menu you can let the user select
+an operating system to boot, either from the network or from a local
+storage media. You can even simplify updating a FlashCard to a new
+bootrom version by using a menu option. Please refer to the file
+README.menu for further information.
+
